@@ -23,33 +23,6 @@ if (localStorage.getItem("bitsyTheme") === "dark") {
     document.body.classList.add("light");
 }
 
-// PWA install prompt (fallback when browser doesn't show install icon)
-let deferredInstallPrompt = null;
-const installBtn = document.getElementById("installBtn");
-
-if (installBtn) {
-    window.addEventListener("beforeinstallprompt", (e) => {
-        e.preventDefault();
-        deferredInstallPrompt = e;
-        if (!window.matchMedia("(display-mode: standalone)").matches) {
-            installBtn.style.display = "flex";
-        }
-    });
-
-    installBtn.addEventListener("click", () => {
-        if (!deferredInstallPrompt) return;
-        deferredInstallPrompt.prompt();
-        deferredInstallPrompt.userChoice.then((choice) => {
-            if (choice.outcome === "accepted") installBtn.style.display = "none";
-            deferredInstallPrompt = null;
-        });
-    });
-
-    if (window.matchMedia("(display-mode: standalone)").matches) {
-        installBtn.style.display = "none";
-    }
-}
-
 progressSwitch.addEventListener("click", () => {
     showProgressValue = !showProgressValue;
     progressSwitch.classList.toggle("active");
