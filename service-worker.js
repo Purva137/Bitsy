@@ -4,12 +4,12 @@ const CACHE_NAME = 'bitsy-v1';
 
 const PRECACHE_URLS = [
   './',
-  'index.html',
-  'style.css',
-  'script.js',
-  'manifest.json',
-  'icons/icon-192.png',
-  'icons/icon-512.png'
+  './index.html',
+  './style.css',
+  './script.js',
+  './manifest.json',
+  './icons/icon-192.png',
+  './icons/icon-512.png'
 ];
 
 // Install: precache core assets
