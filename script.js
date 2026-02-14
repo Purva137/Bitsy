@@ -1,5 +1,6 @@
 const habitsContainer = document.getElementById("habits");
 const addHabitBtn = document.getElementById("addHabit");
+const exportProgressBtn = document.getElementById("exportProgress");
 const themeToggle = document.getElementById("themeToggle");
 const modal = document.getElementById("modal");
 const habitNameInput = document.getElementById("habitName");
@@ -145,6 +146,7 @@ function renderHabit() {
     const counterEl = document.getElementById("habitCounter");
     habitsContainer.innerHTML = "";
 
+    if (exportProgressBtn) exportProgressBtn.style.display = habits.length > 0 ? "" : "none";
     if (habits.length === 0) {
         counterEl.textContent = "0 / 0";
         return;
@@ -287,6 +289,62 @@ function renderHabit() {
     });
 
     habitsContainer.appendChild(card);
+}
+
+function exportProgressAsImage() {
+    if (typeof html2canvas !== "function" || habits.length === 0) return;
+
+    const card = habitsContainer.querySelector(".habit-card");
+    if (!card) return;
+
+    const habit = habits[currentHabitIndex];
+    const total = habit.totalSquares ?? TOTAL_SQUARES;
+    const completed = habit.currentIndex ?? 0;
+    const isDark = document.body.classList.contains("dark");
+
+    const clone = card.cloneNode(true);
+    const progressEl = clone.querySelector(".progress");
+    if (progressEl) {
+        const pct = Math.round((completed / total) * 100);
+        progressEl.textContent = `Day ${completed} / ${total} • ${pct}%`;
+        progressEl.style.marginTop = "10px";
+        progressEl.style.fontSize = "14px";
+    }
+
+    const wrapper = document.createElement("div");
+    wrapper.className = isDark ? "export-wrapper dark" : "export-wrapper";
+    wrapper.style.cssText = "position:fixed;left:-9999px;top:0;padding:24px;";
+    wrapper.style.background = isDark ? "#141b26" : "#e7e2d9";
+
+    clone.style.marginBottom = "0";
+    wrapper.appendChild(clone);
+    document.body.appendChild(wrapper);
+
+    html2canvas(wrapper, {
+        backgroundColor: null,
+        scale: 2,
+        useCORS: true,
+        logging: false
+    }).then((canvas) => {
+        document.body.removeChild(wrapper);
+
+        const name = (habit.name || "habit").replace(/[^a-zA-Z0-9\s-]/g, "").replace(/\s+/g, "-").slice(0, 40) || "habit";
+        const filename = `bitsy-${name}-progress.png`;
+
+        canvas.toBlob((blob) => {
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(a.href);
+        }, "image/png");
+    }).catch(() => {
+        if (wrapper.parentNode) document.body.removeChild(wrapper);
+    });
+}
+
+if (exportProgressBtn) {
+    exportProgressBtn.addEventListener("click", exportProgressAsImage);
 }
 
 document.getElementById("prevHabit").onclick = () => {

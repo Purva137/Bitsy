@@ -234,6 +234,36 @@ body.dark {
     font-size: 12px;
   }
   
+  .export-btn {
+    width: 100%;
+    background: #8ea4c2;
+    border: 3px solid #0f141c;
+    padding: 12px 16px;
+    text-align: center;
+    cursor: pointer;
+    color: #fff;
+    font-weight: bold;
+    font-size: 14px;
+    margin-bottom: 12px;
+  }
+
+  .export-btn:hover {
+    background: #9eb2ce;
+  }
+
+  .export-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .dark .export-btn {
+    background: #5a6d89;
+  }
+
+  .dark .export-btn:hover {
+    background: #6b7e99;
+  }
+
   .add-btn {
     width: 100%;
     background: #aab597;
