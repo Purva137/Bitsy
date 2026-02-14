@@ -199,8 +199,32 @@ body.dark {
     cursor: pointer;
   }
 
-  .pixel.active {
+  .pixel.completed {
     background: var(--habit-color, #8ea4c2);
+    pointer-events: none;
+  }
+
+  .pixel.active-square {
+    cursor: pointer;
+  }
+
+  .pixel.locked {
+    pointer-events: none;
+  }
+
+  .square-unlock {
+    animation: unlockPop 0.2s ease-out;
+  }
+
+  @keyframes unlockPop {
+    0% {
+      transform: scale(0.75);
+      opacity: 0.5;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
   }
 
   .progress {

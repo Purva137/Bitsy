@@ -9,19 +9,88 @@ const colorElements = document.querySelectorAll(".color");
 const progressSwitch = document.getElementById("progressSwitch");
 const modalTitle = document.getElementById("modalTitle");
 
+const STORAGE_KEY = "bitsy_data";
+
 let selectedColor = "#A8E6CF";
 let showProgressValue = false;
 let editingHabitId = null;
 let currentHabitIndex = 0;
-let habits = JSON.parse(localStorage.getItem("bitsyHabits")) || [];
+let habits = [];
 
-if (localStorage.getItem("bitsyTheme") === "dark") {
-    document.body.classList.remove("light");
-    document.body.classList.add("dark");
-    themeToggle.textContent = "☀️";
-} else {
-    document.body.classList.add("light");
+function saveData() {
+    const data = {
+        habits,
+        currentHabitIndex,
+        darkMode: document.body.classList.contains("dark")
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
+
+function loadData() {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+        try {
+            const data = JSON.parse(raw);
+            habits = (Array.isArray(data.habits) ? data.habits : []).map(migrateHabit);
+            const maxIdx = Math.max(0, habits.length - 1);
+            currentHabitIndex = Math.max(0, Math.min(data.currentHabitIndex ?? 0, maxIdx));
+            if (data.darkMode) {
+                document.body.classList.remove("light");
+                document.body.classList.add("dark");
+                themeToggle.textContent = "☀️";
+            } else {
+                document.body.classList.add("light");
+                document.body.classList.remove("dark");
+                themeToggle.textContent = "🌙";
+            }
+        } catch (_e) {
+            initDefaults();
+        }
+    } else {
+        const legacyHabits = localStorage.getItem("bitsyHabits");
+        if (legacyHabits) {
+            try {
+                habits = JSON.parse(legacyHabits).map(migrateHabit);
+                currentHabitIndex = 0;
+                if (localStorage.getItem("bitsyTheme") === "dark") {
+                    document.body.classList.remove("light");
+                    document.body.classList.add("dark");
+                    themeToggle.textContent = "☀️";
+                } else {
+                    document.body.classList.add("light");
+                    themeToggle.textContent = "🌙";
+                }
+                saveData();
+            } catch (_e) {
+                initDefaults();
+            }
+        } else {
+            initDefaults();
+        }
+    }
+}
+
+function initDefaults() {
+    habits = [];
+    currentHabitIndex = 0;
+    document.body.classList.add("light");
+    document.body.classList.remove("dark");
+    themeToggle.textContent = "🌙";
+}
+
+const TOTAL_SQUARES = 90;
+
+function migrateHabit(habit) {
+    if (habit.totalSquares != null && habit.currentIndex != null) return habit;
+    if (Array.isArray(habit.days)) {
+        habit.totalSquares = TOTAL_SQUARES;
+        habit.currentIndex = Math.min(habit.days.filter(Boolean).length, TOTAL_SQUARES);
+        delete habit.days;
+    }
+    return habit;
+}
+
+loadData();
 
 progressSwitch.addEventListener("click", () => {
     showProgressValue = !showProgressValue;
@@ -31,18 +100,10 @@ progressSwitch.addEventListener("click", () => {
 document.getElementById("themeToggle").onclick = function() {
     document.body.classList.toggle("dark");
     document.body.classList.toggle("light", !document.body.classList.contains("dark"));
-    if (document.body.classList.contains("dark")) {
-        localStorage.setItem("bitsyTheme", "dark");
-    } else {
-        localStorage.setItem("bitsyTheme", "light");
-    }
     this.textContent = document.body.classList.contains("dark") ? "☀️" : "🌙";
+    saveData();
     renderHabit();
 };
-
-function saveHabits() {
-    localStorage.setItem("bitsyHabits", JSON.stringify(habits));
-}
 
 function createHabit(name, color, showProgress = false) {
     return {
@@ -50,8 +111,34 @@ function createHabit(name, color, showProgress = false) {
         name,
         color,
         showProgress,
-        days: Array(90).fill(false)
+        totalSquares: TOTAL_SQUARES,
+        currentIndex: 0
     };
+}
+
+function hexToRgba(hex, alpha) {
+    const m = hex.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
+    if (!m) return "rgba(91,111,147,0.7)";
+    const r = parseInt(m[1], 16), g = parseInt(m[2], 16), b = parseInt(m[3], 16);
+    return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function playClickSound() {
+    try {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return;
+        const ctx = new Ctx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = "square";
+        osc.frequency.value = 660;
+        gain.gain.setValueAtTime(0.2, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.04);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.04);
+    } catch (_e) {}
 }
 
 function renderHabit() {
@@ -88,41 +175,77 @@ function renderHabit() {
 
     grid.style.setProperty("--habit-color", habit.color);
 
+    const total = habit.totalSquares ?? TOTAL_SQUARES;
+    const curIdx = Math.min(habit.currentIndex ?? 0, total);
     const isDark = document.body.classList.contains("dark");
 
-    habit.days.forEach((filled, index) => {
+    for (let i = 0; i < total; i++) {
         const pixel = document.createElement("div");
         pixel.className = "pixel";
-        if (filled) {
-            pixel.classList.add("active");
+        pixel.dataset.index = String(i);
+
+        if (i < curIdx) {
+            pixel.classList.add("completed");
             pixel.style.backgroundColor = habit.color;
+            pixel.style.cursor = "default";
+        } else if (i === curIdx) {
+            pixel.classList.add("active-square");
+            pixel.style.backgroundColor = isDark ? "rgba(255,255,255,0.08)" : "#bfb6a5";
+            pixel.style.boxShadow = `0 0 6px ${hexToRgba(habit.color, 0.7)}`;
         } else {
-            if (isDark) {
-                pixel.style.backgroundColor = "rgba(255,255,255,0.08)";
-            }
+            pixel.classList.add("locked");
+            pixel.style.backgroundColor = isDark ? "rgba(255,255,255,0.04)" : "rgba(191,182,165,0.5)";
+            pixel.style.cursor = "default";
         }
 
-        pixel.addEventListener("click", () => {
-            habit.days[index] = !habit.days[index];
-
-            const completed = habit.days.filter(d => d).length;
-
-            if (completed === 90) {
-                celebrate(habit);
-                habit.days = Array(90).fill(false);
-            }
-
-            saveHabits();
-            renderHabit();
-        });
-
         grid.appendChild(pixel);
+    }
+
+    grid.addEventListener("click", function onGridClick(e) {
+        const pixel = e.target.closest(".pixel");
+        if (!pixel || !pixel.classList.contains("active-square")) return;
+        const idx = parseInt(pixel.dataset.index, 10);
+        if (idx !== (habit.currentIndex ?? 0)) return;
+
+        playClickSound();
+        pixel.classList.remove("active-square");
+        pixel.classList.add("completed", "square-unlock");
+        pixel.style.backgroundColor = habit.color;
+        pixel.style.boxShadow = "";
+        pixel.style.cursor = "default";
+
+        habit.currentIndex = idx + 1;
+
+        if (habit.currentIndex >= total) {
+            celebrate(habit);
+            habit.currentIndex = 0;
+            saveData();
+            renderHabit();
+            return;
+        }
+
+        const nextPixel = grid.querySelector(`[data-index="${habit.currentIndex}"]`);
+        if (nextPixel) {
+            nextPixel.classList.remove("locked");
+            nextPixel.classList.add("active-square");
+            nextPixel.style.backgroundColor = isDark ? "rgba(255,255,255,0.08)" : "#bfb6a5";
+            nextPixel.style.boxShadow = `0 0 6px ${hexToRgba(habit.color, 0.7)}`;
+            nextPixel.style.cursor = "pointer";
+        }
+
+        if (habit.showProgress) {
+            const pct = Math.round((habit.currentIndex / total) * 100);
+            progressText.textContent = `Day ${habit.currentIndex} / ${total} • ${pct}%`;
+            progressText.style.marginTop = "10px";
+            progressText.style.fontSize = "14px";
+        }
+
+        saveData();
     });
 
     if (habit.showProgress) {
-        const completed = habit.days.filter(d => d).length;
-        const percent = Math.round((completed / 90) * 100);
-        progressText.textContent = `Day ${completed} / 90 • ${percent}%`;
+        const pct = Math.round((curIdx / total) * 100);
+        progressText.textContent = `Day ${curIdx} / ${total} • ${pct}%`;
         progressText.style.marginTop = "10px";
         progressText.style.fontSize = "14px";
     }
@@ -130,14 +253,14 @@ function renderHabit() {
     const settingsBtn = card.querySelector(".settings-btn");
     settingsBtn.addEventListener("click", () => {
         habit.showProgress = !habit.showProgress;
-        saveHabits();
+        saveData();
         renderHabit();
     });
 
     card.querySelector(".delete-btn").addEventListener("click", () => {
         if (confirm("Delete this habit?")) {
             habits = habits.filter(h => h.id !== habit.id);
-            saveHabits();
+            saveData();
             currentHabitIndex = Math.min(currentHabitIndex, Math.max(0, habits.length - 1));
             renderHabit();
         }
@@ -169,6 +292,7 @@ function renderHabit() {
 document.getElementById("prevHabit").onclick = () => {
     if (currentHabitIndex > 0) {
         currentHabitIndex--;
+        saveData();
         renderHabit();
     }
 };
@@ -176,6 +300,7 @@ document.getElementById("prevHabit").onclick = () => {
 document.getElementById("nextHabit").onclick = () => {
     if (currentHabitIndex < habits.length - 1) {
         currentHabitIndex++;
+        saveData();
         renderHabit();
     }
 };
@@ -210,6 +335,7 @@ createHabitBtn.addEventListener("click", () => {
     const name = habitNameInput.value.trim();
     if (!name) return;
 
+    const wasEditing = !!editingHabitId;
     if (editingHabitId) {
         const habit = habits.find(h => h.id === editingHabitId);
         habit.name = name;
@@ -221,8 +347,8 @@ createHabitBtn.addEventListener("click", () => {
         habits.push(createHabit(name, selectedColor, showProgressValue));
     }
 
-    saveHabits();
-    if (!editingHabitId) {
+    saveData();
+    if (!wasEditing) {
         currentHabitIndex = habits.length - 1;
     }
     renderHabit();
