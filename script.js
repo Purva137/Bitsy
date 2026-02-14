@@ -106,6 +106,13 @@ document.getElementById("themeToggle").onclick = function() {
     renderHabit();
 };
 
+const closeBtn = document.querySelector(".close-btn");
+closeBtn.addEventListener("click", () => {
+    if (window.electronAPI) {
+        window.electronAPI.closeApp();
+    }
+});
+
 function createHabit(name, color, showProgress = false) {
     return {
         id: Date.now(),
@@ -439,9 +446,14 @@ function celebrate(habit) {
 
 // PWA: register service worker (relative path for GitHub Pages)
 if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-        navigator.serviceWorker.register("./service-worker.js", { scope: "./" })
-            .then((reg) => { if (reg.installing) console.log("Bitsy SW installing"); })
-            .catch((err) => console.warn("SW registration failed:", err));
-    });
+    if (window.location.protocol !== "file:") {
+        navigator.serviceWorker.register("service-worker.js");
+    } else {
+        // Running inside Electron → remove any existing service workers
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+            for (let registration of registrations) {
+                registration.unregister();
+            }
+        });
+    }
 }
