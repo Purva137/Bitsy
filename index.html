@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#434d60">
+    <meta name="description" content="Bitsy — 90-day habit tracker">
+    <title>Bitsy</title>
+    <link rel="manifest" href="manifest.json">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="light">
+    <div class="app-window">
+        <div class="title-bar">
+            <span>Bitsy.exe</span>
+            <div class="window-controls">
+                <div class="control-btn" id="themeToggle">🌙</div>
+                <div class="control-btn">✕</div>
+            </div>
+        </div>
+        <div class="app-content">
+            <div class="app">
+                <h1>Bitsy 🌿</h1>
+
+                <div class="habit-nav">
+                    <button type="button" id="prevHabit">&lt;</button>
+                    <span id="habitCounter">1 / 1</span>
+                    <button type="button" id="nextHabit">&gt;</button>
+                </div>
+
+                <div id="habits"></div>
+
+                <button id="addHabit" class="add-btn">+ Add Habit</button>
+            </div>
+        </div>
+    </div>
+    <div id="modal" class="modal hidden">
+        <div class="modal-window">
+            <div class="modal-header">
+                <h2 id="modalTitle">New Habit 🌱</h2>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="habitName" placeholder="Habit name..." />
+
+                <div class="color-options">
+                    <div class="color" data-color="#A8E6CF" style="background: #A8E6CF;"></div>
+                    <div class="color" data-color="#B5D8F7" style="background: #B5D8F7;"></div>
+                    <div class="color" data-color="#C8B6FF" style="background: #C8B6FF;"></div>
+                    <div class="color" data-color="#B7C4A5" style="background: #B7C4A5;"></div>
+                </div>
+
+                <div class="progress-toggle">
+                    <span>Show Progress</span>
+                    <div class="switch" id="progressSwitch">
+                        <div class="switch-thumb"></div>
+                    </div>
+                </div>
+
+                <div class="modal-buttons">
+                    <button id="cancelBtn">Cancel</button>
+                    <button id="createHabitBtn">Create</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
